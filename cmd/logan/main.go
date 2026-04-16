@@ -2,15 +2,26 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
+type Summary struct {
+	TotalLines int `json:"total_lines"`
+	Warn       int `json:"warn"`
+	Info       int `json:"info"`
+	Error      int `json:"error"`
+}
+
 func main() {
-	if len(os.Args) != 3 || os.Args[1] != "analyze" {
-		fmt.Fprintln(os.Stderr, "Usage: analyze <file-path>")
+	if len(os.Args) < 3 || len(os.Args) > 4 || os.Args[1] != "analyze" {
+		fmt.Fprintln(os.Stderr, "Usage: analyze <file-path> --json")
 		os.Exit(2)
 	}
+
+	jsonMode := len(os.Args) == 4 && os.Args[3] == "--json"
 
 	filepath := os.Args[2]
 
@@ -25,6 +36,9 @@ func main() {
 
 	// we create a scanner buffer which holds chunk of bytes (lines) in memory from the file descriptor given
 	scanner := bufio.NewScanner(file)
+	infoCount := 0
+	warnCount := 0
+	errorCount := 0
 	totalLines := 0
 
 	// Scan() returns true until a new line is read, it returns false if EOF/error is occured
@@ -32,6 +46,16 @@ func main() {
 	// when /n is encountered, the data in that line becomes the current token
 	// when encountered EOF, Scan() returns false
 	for scanner.Scan() {
+		line := scanner.Text() // returns the current token/line read
+
+		if strings.Contains(line, " INFO ") {
+			infoCount++
+		} else if strings.Contains(line, " WARN ") {
+			warnCount++
+		} else if strings.Contains(line, " ERROR ") {
+			errorCount++
+		}
+
 		totalLines++
 	}
 
@@ -43,5 +67,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Total lines: %d\n", totalLines)
+	summary := Summary{
+		TotalLines: totalLines, Warn: warnCount, Info: infoCount, Error: errorCount,
+	}
+
+	if jsonMode {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ") //pretty json
+
+		// converts the struct data into json format and prints it based on the indentation
+		if err := enc.Encode(summary); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing JSON: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Printf("Total lines: %d\n", totalLines)
+		fmt.Printf("INFO: %d\n", infoCount)
+		fmt.Printf("WARN: %d\n", warnCount)
+		fmt.Printf("ERROR: %d\n", errorCount)
+	}
 }
