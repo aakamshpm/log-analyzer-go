@@ -1,0 +1,7 @@
+2026-04-16T10:00:01Z INFO service started
+2026-04-16T10:00:05Z INFO listening on :8080
+2026-04-16T10:01:10Z WARN cache miss for key=user:42
+2026-04-16T10:02:33Z INFO request completed path=/health
+2026-04-16T10:03:20Z ERROR database timeout
+2026-04-16T10:03:45Z INFO retry succeeded
+2026-04-16T10:04:12Z WARN high memory usage detected
